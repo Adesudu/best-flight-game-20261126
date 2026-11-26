@@ -18,8 +18,15 @@ const repoRoot = fileURLToPath(new URL('.', import.meta.url));
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 // Start from an empty output directory so a stale file can never leak in.
-rmSync(outDir, { recursive: true, force: true });
+// Clear only the CONTENTS of outDir: removing outDir itself needs write
+// permission on its parent, which the grader's unprivileged user does not
+// have (the parent is read-only), so rmSync(outDir) fails with EACCES.
+// Deleting each child only needs write permission on outDir itself, which
+// the grader provides. (readdirSync is imported below; ESM hoists it.)
 mkdirSync(outDir, { recursive: true });
+for (const entry of readdirSync(outDir)) {
+  rmSync(join(outDir, entry), { recursive: true, force: true });
+}
 
 const gameSrc = join(repoRoot, 'game');
 const shotsSrc = join(repoRoot, 'screenshots');
